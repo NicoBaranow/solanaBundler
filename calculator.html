@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>It's just a $ROCK</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <script src="https://unpkg.com/@solana/web3.js@1.73.3/lib/index.iife.min.js"></script>
+    
+
+    <style>
+      body{font-family:system-ui,sans-serif;text-align:center;margin-top:2rem}
+      #connectButton, #disconnectButton{width: 300px;background: #512da8;color: #fff;border: 0;padding: .75em 1em;margin: .75em 0;border-radius: .35em;font-size: 1rem;cursor: pointer;transition: background-color .2s}
+      #connectButton:hover, #disconnectButton:hover{background:#391489}
+      #walletAddress,#walletSOL,#walletROCK{margin-top:.8em;font-weight:500}
+
+      #walletPopup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:9999}
+      #walletPopup .box{background:#fff;padding:2rem 3rem;border-radius:.6rem;max-width:340px;width:92vw;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+      #walletList button{width:100%;display:flex;align-items:center;gap:.6em;background:#f5f5f8;color:#000;margin:.4em 0;padding:.55em .8em;border-radius:.4em}
+      #walletList img{width:24px;height:24px;object-fit:contain}
+      #walletAddress,#walletSOL,#walletROCK{margin-top:.8em;font-weight:500}
+    
+    </style>
+    
+
+    <style>
+      /* Contenedor principal */
+      #calculator {
+        max-width: 450px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        background: #fafafa;
+        border-radius: .5em;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        font-family: system-ui, sans-serif;
+        color: #333;
+      }
+    
+      h3 {
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+        text-align: center;
+      }
+    
+      h4 {
+        margin: 1.5rem 0 .5rem;
+        font-size: 1.1rem;
+      }
+    
+      /* Radio selectors */
+      .price-source {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+      .price-source label {
+        cursor: pointer;
+        font-size: .95rem;
+      }
+    
+      /* Price input + refresh botón */
+      .price-group {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        max-width: 100%;
+        margin-bottom: .5rem;
+      }
+      .price-group input {
+        flex: 1;
+        height: 2.5rem;
+        padding: 0 .75rem;
+        font-size: 1rem;
+        line-height: 1.2;
+        border: 1px solid #ccc;
+        border-radius: .35em;
+        background: #eaeaea;
+        transition: background-color .3s, border-color .3s, transform .2s;
+      }
+    
+      /* Grupo de input + MAX afuera */
+      .input-group {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        max-width: 100%;
+        margin: .5rem 0;
+      }
+      .input-group input {
+        flex: 1;
+        height: 2.5rem;
+        padding: 0 .75rem;
+        font-size: 1rem;
+        line-height: 1.2;
+        border: 1px solid #ccc;
+        border-radius: .35em;
+        background: #eaeaea;
+        transition: background-color .3s, border-color .3s, transform .2s;
+      }
+    
+      /* Quitar flechitas de número */
+      .input-group input::-webkit-outer-spin-button,
+      .input-group input::-webkit-inner-spin-button,
+      .price-group input::-webkit-outer-spin-button,
+      .price-group input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    
+      /* Focus styles */
+      .input-group input:focus,
+      .price-group input:focus {
+        background-color: #333;
+        color: #fff;
+        border-color: #512da8;
+        transform: scale(1.02);
+        outline: none;
+      }
+    
+      /* Botón MAX junto al input */
+      .input-group .max-btn {
+        flex-shrink: 0;
+        height: 2.5rem;
+        padding: 0 1rem;
+        font-size: .9rem;
+        font-weight: 600;
+        color: #fff;
+        background-color: #512da8;
+        border: 1px solid #512da8;
+        border-radius: .35em;
+        cursor: pointer;
+        transition: background-color .2s, transform .2s;
+      }
+      .input-group .max-btn:hover {
+        background-color: #673ab7;
+        transform: translateY(-1px);
+      }
+      .input-group .max-btn:active {
+        background-color: #3e1f78;
+        transform: translateY(0);
+      }
+    
+      /* Botón de refrescar precio */
+      .refresh-btn {
+        padding: 0 .75rem;
+        font-size: 1.2rem;
+        border: none;
+        border-radius: .35em;
+        background: #007f5f;
+        color: #fff;
+        cursor: pointer;
+        transition: background-color .2s;
+      }
+      .refresh-btn:hover {
+        background: #00664d;
+      }
+    
+      /* Botones principales */
+      .action-btn {
+        display: block;
+        width: 100%;
+        background: #512da8;
+        color: #fff;
+        border: 0;
+        padding: .75em 1em;
+        margin: .75em 0;
+        border-radius: .35em;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color .2s;
+      }
+      .action-btn:hover {
+        background-color: #391489;
+      }
+    
+      /* Texto de estado / mensajes */
+      #priceStatus {
+        font-size: .85rem;
+        color: #666;
+        margin-bottom: 1rem;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <button id="connectButton">Connect Wallet</button>
+
+    <div id="walletAddress"></div>
+    <div id="walletSOL"></div>
+    <div id="walletROCK"></div>
+
+    <!-- Popup -->
+    <div id="walletPopup">
+      <div class="box">
+        <h2 style="margin-top:0">Choose your wallet</h2>
+        <div id="walletList"></div>
+        <button id="disconnectButton" onclick="closePopup()">Cancel</button>
+      </div>
+    </div>
+    
+
+    <div id="calculator">
+      <h3>$ROCK Calculator</h3>
+    
+      <!-- Reference Price Selector -->
+      <h4>Reference Price</h4>
+      <div class="price-source">
+        <label>
+          <input type="radio" name="priceSrc" value="market" checked> Market (DEX Screener)
+        </label>
+        <label>
+          <input type="radio" name="priceSrc" value="manual"> Manual
+        </label>
+      </div>
+    
+      <!-- Price + Refresh -->
+      <div class="price-group">
+        <input id="priceInput" type="number" min="0" step="0.0001" placeholder="ROCK Price">
+        <button id="refreshPrice" class="refresh-btn">⟳</button>
+      </div>
+      <p id="priceStatus"></p>
+    
+      <!-- Section 1 -->
+      <div class="section">
+        <h4>1. Buy $ROCK with $SOL</h4>
+        <div class="input-group">
+          <input id="solInput" type="number" min="0" step="0.0001" placeholder="$SOL to invest">
+          <button id="useWalletSol" class="max-btn">MAX</button>
+        </div>
+        <button id="calculateBuy" class="action-btn">Calculate $ROCK &amp; % supply</button>
+        <p id="resultBuy"></p>
+      </div>
+    
+      <!-- Section 2 -->
+      <div class="section">
+        <h4>2. Purchase % of Supply</h4>
+        <div class="input-group">
+          <input id="supplyInput" type="number" min="0" max="100" step="0.01" placeholder="% of supply wanted">
+          <button id="useWalletSupply" class="max-btn">MAX</button>
+        </div>
+        <button id="calculateSupply" class="action-btn">Calculate $ROCK &amp; $SOL needed</button>
+        <p id="resultCost"></p>
+      </div>
+    
+      <!-- Section 3 -->
+      <div class="section">
+        <h4>3. Future Value of my $ROCK</h4>
+        <div class="input-group">
+          <input id="rockInput" type="number" min="0" step="0.0001" placeholder="Amount of $ROCK">
+          <button id="useWalletRock" class="max-btn">MAX</button>
+        </div>
+        <div class="input-group">
+          <input id="targetPriceInput" type="number" min="0" step="0.0001" placeholder="Target price">
+        </div>
+        <button id="calculateFuture" class="action-btn">Calculate value</button>
+        <p id="resultFuture"></p>
+      </div>
+    </div>
+
+    <script>
+      /* ─────────── ELEMENTOS DOM ─────────── */
+      const priceInputField = document.getElementById('priceInput');
+      const priceStatus     = document.getElementById('priceStatus');
+      const refreshBtn      = document.getElementById('refreshPrice');
+
+      /* Inputs y botones MAX */
+      const solInput       = document.getElementById('solInput');
+      const supplyInput    = document.getElementById('supplyInput');
+      const rockInput      = document.getElementById('rockInput');
+
+      const btnMaxSol      = document.getElementById('useWalletSol');
+      const btnMaxSupply   = document.getElementById('useWalletSupply');
+      const btnMaxRock     = document.getElementById('useWalletRock');
+
+      const resultBuy      = document.getElementById('resultBuy');
+      const resultCost     = document.getElementById('resultCost');
+      const resultFuture   = document.getElementById('resultFuture');
+
+      /* Botones de cálculo */
+      const btnCalcBuy     = document.getElementById('calculateBuy');
+      const btnCalcSupply  = document.getElementById('calculateSupply');
+      const btnCalcFuture  = document.getElementById('calculateFuture');
+
+      /* ─────────── CONFIG ─────────── */
+      const DEX_URL   = 'https://api.dexscreener.com/tokens/v1/solana/';
+      const ROCK_MINT = '9AmXAJUk2HKSDAynfhGoJMw22rGNN12oAC2xcjzmpump';
+      const SOL_MINT  = 'So11111111111111111111111111111111111111112';
+      const TOTAL_SUPPLY = 1; // Total supply = 1 ROCK (9‑decimals token)
+      const ROCK_DECIMALS = 9; // 1e‑9 is the minimum unit (0.000000001 ROCK)
+
+      /* ─────────── PRECIOS EN USD ─────────── */
+      let rockPriceUSD = 0;
+      let solPriceUSD  = 0;
+
+      /* ─────────── UTIL ─────────── */
+      function getWalletBalances () {
+        const solMatch  = (document.getElementById('walletSOL').textContent || '')
+                            .match(/([\d.,]+)/);
+        const rockMatch = (document.getElementById('walletROCK').textContent || '')
+                            .match(/([\d.,]+)/);
+        return {
+          sol : solMatch  ? parseFloat(solMatch[1].replace(/,/g,''))  : 0,
+          rock: rockMatch ? parseFloat(rockMatch[1].replace(/,/g,'')) : 0
+        };
+      }
+
+      /* ─────────── OBTENER PRECIO ROCK ─────────── */
+      async function fetchRockPrice () {
+        try {
+          const res = await fetch(`${DEX_URL}${ROCK_MINT}?t=${Date.now()}`);
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const pairsArr = await res.json();
+          if (!pairsArr.length) throw new Error('$ROCK not listed yet');
+          const best = pairsArr.reduce(
+            (m, p) => (+p.liquidity?.usd || 0) > (+m.liquidity?.usd || 0) ? p : m,
+            pairsArr[0]
+          );
+          rockPriceUSD = parseFloat(best.priceUsd ?? best.priceNative) || 0;
+          if (!rockPriceUSD) throw new Error('Empty $ROCK price.');
+
+          /* Si estamos en modo mercado, actualiza input */
+          if (document.querySelector('input[name="priceSrc"][value="market"]').checked) {
+            priceInputField.value = rockPriceUSD.toFixed(8);   // keep 8‑dec precision for price
+          }
+          priceStatus.textContent =
+            `$ROCK ${rockPriceUSD.toFixed(6)} USD – ${new Date().toLocaleTimeString()}`;
+        } catch (err) {
+          console.error(err);
+          priceStatus.textContent = err.message;
+        }
+      }
+
+      /* ─────────── OBTENER PRECIO SOL ─────────── */
+      async function fetchSolPrice () {
+        try {
+          const res = await fetch(`${DEX_URL}${SOL_MINT}?t=${Date.now()}`);
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const pairsArr = await res.json();
+          if (!pairsArr.length) throw new Error('$SOL price unavailable');
+          const best = pairsArr.reduce(
+            (m, p) => (+p.liquidity?.usd || 0) > (+m.liquidity?.usd || 0) ? p : m,
+            pairsArr[0]
+          );
+          solPriceUSD = parseFloat(best.priceUsd ?? best.priceNative) || 0;
+        } catch(e){ console.error(e);}
+      }
+
+      /* ─────────── CÁLCULOS ─────────── */
+      function getCurrentRockPrice () {
+        const manualMode = document.querySelector('input[name="priceSrc"][value="manual"]').checked;
+        return manualMode ? parseFloat(priceInputField.value)||0 : rockPriceUSD;
+      }
+
+      function calculateBuy () {
+        const solAmt = parseFloat(solInput.value) || 0;
+        const rockPrice = getCurrentRockPrice();
+        if (!solAmt || !rockPrice || !solPriceUSD) { resultBuy.textContent='❗Insufficient data.'; return;}
+        const usd      = solAmt * solPriceUSD;
+        const rockGot  = usd / rockPrice;
+        const pct      = (rockGot / TOTAL_SUPPLY) * 100;
+        resultBuy.innerHTML =
+          `≈ <b>${rockGot.toFixed(ROCK_DECIMALS)} ROCK</b> (${pct.toFixed(6)} % of supply)`;
+      }
+
+      function calculateSupply () {
+        const pct = parseFloat(supplyInput.value) || 0;
+        if (!pct || pct>100) { resultCost.textContent='❗Invalid %'; return;}
+        const rockNeeded = (pct/100) * TOTAL_SUPPLY;
+        const rockPrice  = getCurrentRockPrice();
+        if (!rockPrice || !solPriceUSD) { resultCost.textContent='❗Insufficient data'; return;}
+        const usdCost = rockNeeded * rockPrice;
+        const solCost = usdCost / solPriceUSD;
+        resultCost.innerHTML =
+          `You need <b>${rockNeeded.toFixed(ROCK_DECIMALS)} $ROCK</b>, cost ≈ <b>${solCost.toFixed(4)} $SOL</b> (${usdCost.toFixed(2)} USD)`;
+      }
+
+      function calculateFuture () {
+        const rockAmt   = parseFloat(rockInput.value) || 0;
+        const target    = parseFloat(document.getElementById('targetPriceInput').value) || 0;
+        if (!rockAmt || !target) { resultFuture.textContent='❗Invalid data.'; return;}
+        const usd = rockAmt * target;
+        const sol = solPriceUSD ? usd / solPriceUSD : 0;
+        resultFuture.innerHTML =
+          `≈ <b>${usd.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} USD</b>` +
+          (solPriceUSD ? ` (~${sol.toFixed(4)} $SOL)` : '');
+      }
+
+      /* ─────────── MANEJO RADIO (Mercado ↔ Manual) ─────────── */
+      document.querySelectorAll('input[name="priceSrc"]').forEach(radio => {
+        radio.addEventListener('change', e => {
+          const manual = e.target.value === 'manual';
+          priceInputField.disabled = !manual;
+          refreshBtn.disabled      =  manual;
+          refreshBtn.classList.toggle('hidden', manual);
+          priceStatus.textContent  = '';
+          if (!manual) fetchRockPrice();      // al volver a mercado, refresca
+        });
+      });
+
+      /* ─────────── BOTONES MAX ─────────── */
+      btnMaxSol.onclick    = () => { solInput.value   = getWalletBalances().sol; };
+      btnMaxRock.onclick   = () => { rockInput.value  = getWalletBalances().rock; };
+      btnMaxSupply.onclick = () => { supplyInput.value= 100; };
+
+      /* ─────────── BOTONES CALCULAR ─────────── */
+      btnCalcBuy   .onclick = calculateBuy;
+      btnCalcSupply.onclick = calculateSupply;
+      btnCalcFuture.onclick = calculateFuture;
+
+      /* ─────────── BOTÓN REFRESH ─────────── */
+      refreshBtn.addEventListener('click', () => { fetchRockPrice(); fetchSolPrice(); });
+
+      /* ─────────── INICIO ─────────── */
+      fetchSolPrice();
+      document
+        .querySelector('input[name="priceSrc"][value="market"]')
+        .dispatchEvent(new Event('change'));
+      </script>
+
+    <script>
+    /* ---------------- Config ---------------- */
+    const MINT_ROCK = 'DvQWWpjsuaiybqkNedJwh4UbDrHWaid7rZud6p5JrHsk';
+
+    /* iconos originales */
+    const ICON_PHANTOM  = 'https://docs.phantom.com/~gitbook/image?url=https%3A%2F%2F187760183-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252F-MVOiF6Zqit57q_hxJYp%252Ficon%252FU7kNZ4ygz4QW1rUwOuTT%252FWhite%2520Ghost_docs_nu.svg%3Falt%3Dmedia%26token%3D447b91f6-db6d-4791-902d-35d75c19c3d1&width=48&height=48&sign=23b24c2a&sv=2';
+    const ICON_SOLFLARE = 'https://media.licdn.com/dms/image/v2/D4D22AQH1z2lF5gsWZQ/feedshare-shrink_800/B4DZZJ2TcOG8Ag-/0/1744995696934?e=2147483647&v=beta&t=pRocpAmefqadZWFA8m6AGmFw2ondsME4WXBJ6a8pcA8';
+
+    /* ---------------- Estado ---------------- */
+    let wallets=[], current=null, connection;
+
+    /* ---------------- DOM ---------------- */
+    const btn      = document.getElementById('connectButton');
+    const addrDiv  = document.getElementById('walletAddress');
+    const solDiv   = document.getElementById('walletSOL');
+    const rockDiv  = document.getElementById('walletROCK');
+    const popup    = document.getElementById('walletPopup');
+    const listDiv  = document.getElementById('walletList');
+
+    /* ---------------- Helpers ---------------- */
+    const showPopup = () => popup.style.display='flex';
+    const closePopup= () => popup.style.display='none';
+
+    function iconFor(w){return w.isPhantom?ICON_PHANTOM:ICON_SOLFLARE;}
+    function nameFor(w){return w.isPhantom?'Phantom':'Solflare';}
+
+    /* ---------------- Detect ---------------- */
+    async function detectWallets(){
+      wallets=[];
+      if(window.solana?.isPhantom) wallets.push(window.solana);
+      if(window.solflare)          wallets.push(window.solflare);
+    }
+
+    /* ---------------- Render ---------------- */
+    function renderList(){
+      listDiv.innerHTML='';
+      wallets.forEach((w,i)=>{
+        const b=document.createElement('button');
+        b.onclick=()=>selectWallet(i);
+        const img=document.createElement('img');img.src=iconFor(w);img.alt=nameFor(w);
+        b.append(img,document.createTextNode(nameFor(w)));
+        listDiv.appendChild(b);
+      });
+      if(wallets.length===0) listDiv.textContent='No wallets detected.';
+    }
+
+    /* ---------------- Select / Connect ---------------- */
+    async function selectWallet(i){current=wallets[i];closePopup();await connect();}
+
+    async function connect() {
+      try {
+        /* 1. Conectar wallet */
+        await (current.connect ? current.connect() : current.request({ method: 'connect' }));
+
+        /* 2. RPC (con tu endpoint de Helius) */
+        connection = new solanaWeb3.Connection(
+          'https://mainnet.helius-rpc.com/?api-key=5997a00a-ec9a-44c8-a39b-d8ee1ffd420c',
+          'confirmed'
+        );
+
+        const pk  = current.publicKey;
+
+        /* 3. Balance de SOL */
+        const sol = (await connection.getBalance(pk)) / solanaWeb3.LAMPORTS_PER_SOL;
+
+        /* 4. Balance de ROCK (controla si no existe la cuenta) */
+        const resp = await connection.getParsedTokenAccountsByOwner(
+          pk,
+          { mint: new solanaWeb3.PublicKey(MINT_ROCK) }
+        );
+
+        let rock = 0;
+        if (resp.value.length) {
+          const { amount, decimals } =
+            resp.value[0].account.data.parsed.info.tokenAmount;
+          rock = Number(amount) / 10 ** decimals;
+        }
+
+        /* 5. Actualizar UI */
+        addrDiv.textContent = `Address: ${pk}`;
+        solDiv.textContent  = `$SOL balance: ${sol.toLocaleString('en-US', {
+          minimumFractionDigits: 4, maximumFractionDigits: 4
+        })}`;
+        rockDiv.textContent = `$MOONAPU balance: ${rock.toLocaleString('en-US', {
+          minimumFractionDigits: 4, maximumFractionDigits: 4
+        })}`;
+
+        btn.textContent = 'Disconnect Wallet';
+        current.on?.('disconnect', resetUI);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    /* ---------------- Disconnect / Reset ---------------- */
+    async function disconnect(){
+      try{
+        await (current.disconnect?current.disconnect():current.request({method:'disconnect'}));
+      }catch{}
+      resetUI();
+    }
+    function resetUI(){
+      current=null;
+      addrDiv.textContent=solDiv.textContent=rockDiv.textContent='';
+      btn.textContent='Connect Wallet';
+    }
+
+    /* ---------------- Main button ---------------- */
+    btn.onclick=async()=>{
+      if(current) return disconnect();
+      await detectWallets();renderList();showPopup();
+    };
+    </script>
+  </body>
+</html>
